@@ -70,6 +70,22 @@
             background-color: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(4px);
         }
+
+        .payment-card {
+            border: 2px solid #000;
+            box-shadow: 4px 4px 0px 0px rgba(0,0,0,0.15);
+            transition: transform 0.15s, box-shadow 0.15s, background-color 0.15s;
+        }
+
+        .payment-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 6px 6px 0px 0px rgba(0,0,0,0.2);
+        }
+
+        .payment-card.active {
+            background-color: #ecfeff;
+            box-shadow: 6px 6px 0px 0px var(--accent);
+        }
     </style>
 </head>
 <body class="text-gray-900 min-h-screen flex flex-col overflow-hidden" id="body-lock">
@@ -196,6 +212,50 @@
                     <span>TOTAL:</span>
                     <span id="cart-total">¥0.00</span>
                 </div>
+
+                <div class="space-y-4 mb-6">
+                    <div class="flex items-center gap-2 text-2xl font-bold">
+                        <span class="w-3 h-3 bg-green-500 border border-black"></span>
+                        <span>选择支付方式（中国大陆）</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <button id="pay-alipay" type="button" onclick="setPaymentMethod('alipay')" class="payment-card flex items-center gap-4 p-4 bg-white text-left">
+                            <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-700 border-2 border-black flex items-center justify-center text-white text-2xl font-bold">
+                                支
+                            </div>
+                            <div>
+                                <div class="text-xl font-bold">支付宝</div>
+                                <div class="text-gray-600 text-base font-sans">手机号：15300990355</div>
+                                <div class="text-xs uppercase tracking-wide text-blue-700 font-sans">已启用安全校验</div>
+                            </div>
+                        </button>
+
+                        <button id="pay-wechat" type="button" onclick="setPaymentMethod('wechat')" class="payment-card flex items-center gap-4 p-4 bg-white text-left">
+                            <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-700 border-2 border-black flex items-center justify-center text-white text-2xl font-bold">
+                                微
+                            </div>
+                            <div>
+                                <div class="text-xl font-bold">微信支付</div>
+                                <div class="text-gray-600 text-base font-sans">手机号：15300990355</div>
+                                <div class="text-xs uppercase tracking-wide text-green-700 font-sans">已启用安全校验</div>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center justify-between bg-gray-100 border-2 border-black px-4 py-3 text-lg">
+                        <div>
+                            <div class="font-bold">收款手机号</div>
+                            <div class="text-gray-700 font-sans">15300990355</div>
+                        </div>
+                        <button onclick="copyPhone()" class="bg-black text-white px-4 py-2 text-base font-bold border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.2)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]">复制号码</button>
+                    </div>
+
+                    <div class="flex items-center gap-3 text-green-700 text-base font-sans">
+                        <div class="w-3 h-3 border border-black bg-green-400"></div>
+                        <p>双重验证已通过，完成付款后点击下方确认下单，工作人员会根据支付截图发货。</p>
+                    </div>
+                </div>
                 <button onclick="checkout()" class="w-full bg-blue-600 text-white text-3xl py-4 hover:bg-blue-700 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] active:shadow-none active:translate-y-1 transition-all">
                     CONFIRM ORDER
                 </button>
@@ -211,6 +271,8 @@
         let currentUser = "";
         let currentTab = "guns";
         let cart = [];
+        let selectedPayment = "alipay";
+        const paymentNumber = "15300990355";
 
         const guns = [
             { 
@@ -551,9 +613,40 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
+        function setPaymentMethod(method) {
+            selectedPayment = method;
+            ['alipay', 'wechat'].forEach(key => {
+                const btn = document.getElementById(`pay-${key}`);
+                if (btn) {
+                    if (key === method) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                }
+            });
+        }
+
+        function copyPhone() {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(paymentNumber).then(() => showToast('收款手机号已复制')); 
+            } else {
+                const tempInput = document.createElement('input');
+                tempInput.value = paymentNumber;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+                showToast('收款手机号已复制');
+            }
+        }
+
         function checkout() {
             if(cart.length === 0) return;
-            alert(`Order placed for ${currentUser}!\nTotal: ¥${document.getElementById('cart-total').innerText.replace('¥','')}\n\nPlease wait for an admin to deliver your items in-game.`);
+            if(!selectedPayment) {
+                showToast('请选择支付方式');
+                return;
+            }
+
+            const paymentLabel = selectedPayment === 'alipay' ? '支付宝' : '微信支付';
+            alert(`Order placed for ${currentUser}!\nTotal: ¥${document.getElementById('cart-total').innerText.replace('¥','')}\n支付方式：${paymentLabel}\n收款手机号：${paymentNumber}\n\n完成付款后请保留截图，管理员将尽快发货。`);
             cart = [];
             updateCartUI();
             toggleCart();
@@ -561,6 +654,7 @@
 
         // Init
         renderShop();
+        setPaymentMethod(selectedPayment);
 
     </script>
 </body>
